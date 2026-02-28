@@ -162,11 +162,6 @@ body {
     border-color 0.3s ease;
 }
 
-.glass-card:hover {
-  background: var(--bg-glass-hover);
-  box-shadow: var(--shadow-lg);
-}
-
 /* ───────────────────────────────────────────────
    Layout
 ─────────────────────────────────────────────── */
@@ -176,7 +171,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding: 0 1rem;
+  padding: 0 0;
 }
 
 .main-content {
@@ -187,7 +182,12 @@ body {
   padding: 2rem 0 4rem;
   display: flex;
   flex-direction: column;
+  padding: 1rem 1.5rem;
   gap: 1.5rem;
+}
+
+.main-content--dashboard {
+  max-width: none;
 }
 
 /* ───────────────────────────────────────────────
@@ -206,6 +206,20 @@ body {
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid var(--border-glass);
   transition: background 0.4s ease, border-color 0.4s ease;
+  gap: 1rem;
+}
+
+.header-brand {
+  flex-shrink: 0;
+}
+
+.header-nav {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  max-width: none;
 }
 
 .header-brand {
@@ -254,6 +268,7 @@ body {
    Theme Toggle
 ─────────────────────────────────────────────── */
 .theme-toggle {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1158,6 +1173,7 @@ body {
   .progress-steps { display: none; }
   .segment-row { grid-template-columns: 70px 1fr; }
   .segment-row .segment-time:last-of-type { display: none; }
+  .header-nav.tab-nav,
   .tab-nav { gap: 0.25rem; padding: 0 0.75rem; }
   .tab-btn { font-size: 0.8rem; padding: 0.6rem 0.75rem; }
   .vr-controls { flex-direction: column; }
@@ -1954,6 +1970,338 @@ body {
 .db-action-btn:hover {
   opacity: 0.9;
   transform: translateY(-1px);
+}
+
+/* ── Teaching analysis section (dashboard) ───────────────────────────── */
+
+.db-teaching-section {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .db-teaching-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.db-teaching-left {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.db-teaching-chart-wrap {
+  padding: 1rem 1.2rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.db-teaching-chart {
+  min-height: 220px;
+  position: relative;
+  width: 100%;
+}
+
+.db-teaching-chart-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.db-teaching-chart-tab {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt, rgba(255,255,255,0.04));
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.db-teaching-chart-tab:hover {
+  background: var(--surface-alt, rgba(255,255,255,0.08));
+  color: var(--text-secondary, inherit);
+}
+
+.db-teaching-chart-tab.active {
+  background: var(--surface-alt, rgba(255,255,255,0.12));
+  border-color: var(--border);
+  color: var(--text-primary, #fff);
+  font-weight: 600;
+}
+
+.db-teaching-tooltip {
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-elevated, rgba(0,0,0,0.4));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-width: min(220px, 90vw);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  z-index: 10;
+}
+.db-teaching-tooltip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-teaching-list-wrap {
+  padding: 1rem 1.2rem;
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+.db-teaching-list-wrap .db-panel-title {
+  margin-bottom: 0.75rem;
+}
+
+.db-teaching-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.db-teaching-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary, inherit);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.db-teaching-list-item:hover {
+  background: var(--surface-alt, rgba(255,255,255,0.06));
+}
+
+.db-teaching-list-item.selected {
+  background: var(--accent-soft, rgba(99,102,241,0.12));
+  border-color: var(--accent-primary, #6366f1);
+}
+
+.db-teaching-thumb {
+  flex-shrink: 0;
+  width: 48px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt, rgba(255,255,255,0.08));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.db-teaching-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.db-teaching-thumb-icon {
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+.db-teaching-list-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.db-teaching-list-date {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.db-teaching-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.db-teaching-scores-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.db-teaching-score-card {
+  flex: 1;
+  min-width: 140px;
+}
+
+.db-teaching-rubric {
+  padding: 1.25rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+
+.db-rubric-overall {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.db-rubric-overall-scores {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.db-rubric-overall-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent-primary, #6366f1);
+}
+
+.db-rubric-overall-100 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.db-rubric-overall-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.db-rubric-table-wrap {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 420px;
+}
+
+.db-rubric-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.db-rubric-table th,
+.db-rubric-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  vertical-align: top;
+}
+
+[data-theme='dark'] .db-rubric-table th,
+[data-theme='dark'] .db-rubric-table td {
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.db-rubric-table th {
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface-alt, rgba(255,255,255,0.04));
+}
+
+.db-rubric-th-note {
+  font-weight: 400;
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.db-rubric-col-criterion {
+  width: 22%;
+}
+
+.db-rubric-col-score {
+  width: 12%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.db-rubric-row-section td.db-rubric-category {
+  font-weight: 600;
+  padding-top: 0.75rem;
+  padding-bottom: 0.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  color: var(--text-secondary, inherit);
+}
+
+[data-theme='dark'] .db-rubric-row-section td.db-rubric-category {
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.db-rubric-cell-criterion {
+  font-weight: 500;
+}
+
+.db-rubric-cell-remarks {
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}
+
+.db-rubric-cell-score {
+  text-align: center;
+  font-weight: 600;
+}
+
+.db-teaching-overall {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.db-teaching-overall-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent-primary, #6366f1);
+}
+
+.db-teaching-overall-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.db-teaching-rubric-content {
+  flex: 1;
+  max-height: 400px;
+  white-space: pre-wrap;
+}
+
+.db-teaching-rubric-content.markdown-content {
+  white-space: normal;
 }
 
 /* ── AI Feedback Panel ───────────────────────────────────────────────── */

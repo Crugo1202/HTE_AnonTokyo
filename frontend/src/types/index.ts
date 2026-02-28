@@ -147,6 +147,24 @@ export interface FullAnalysisYoutubeOptions {
   usePlaceholder: boolean
 }
 
+/** Mock display scores for dashboard (replace with backend when available) */
+export interface DisplayScores {
+  bodyScore: number
+  audioScore: number
+  overallScore: number
+}
+
+/** Stored summary of one analysis for dashboard history (frontend-only) */
+export interface AnalysisSummary {
+  id: string
+  videoSource: string
+  createdAt: string
+  result: FullAnalysisResult
+  thumbnailUrl?: string | null
+  /** Mock overall score for graph; stable per analysis */
+  overallScore?: number
+}
+
 // ── Dashboard Types ──────────────────────────────────────────────────────
 
 export interface ServiceStatus {
