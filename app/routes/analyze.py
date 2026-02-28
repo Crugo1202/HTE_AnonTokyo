@@ -35,7 +35,7 @@ from app.schemas.response import (
     YouTubeRequest,
 )
 from app.services.audio_utils import extract_audio
-from app.services.evaluation_service import EvaluationService
+from app.services.gemini_evaluation import evaluate_with_gemini
 from app.services.gemini_body_language import (
     analyze_body_language,
     download_youtube_video,
@@ -43,7 +43,7 @@ from app.services.gemini_body_language import (
     upload_video_to_gemini,
 )
 from app.services.session_stats import stats as session_stats
-from app.services.transcribe_service import TranscribeService
+from app.services.elevenlabs_transcribe import ElevenLabsTranscribeService
 from app.services.voice_analysis import calculate_fluctuation_timeline
 from app.services.youtube_service import YouTubeDownloader, is_valid_youtube_url
 
@@ -125,9 +125,12 @@ async def analyze_file(
 
         logger.info("[%s] Audio extracted → %s", job_id, wav_path)
 
-        # ── Transcribe ────────────────────────────────────────────────────
-        svc = TranscribeService(settings)
-        ws_result = await svc.transcribe(wav_path, language)
+        # ── Transcribe (ElevenLabs Scribe) ────────────────────────────────
+        if not settings.elevenlabs_api_key:
+            raise HTTPException(status_code=500, detail="ELEVENLABS_API_KEY not configured.")
+        svc = ElevenLabsTranscribeService(settings.elevenlabs_api_key, settings.elevenlabs_stt_model)
+        loop = asyncio.get_running_loop()
+        ws_result = await loop.run_in_executor(None, svc.transcribe, wav_path, language)
 
         logger.info("[%s] Transcription done: %d segments, lang=%s",
                     job_id, len(ws_result.segments), ws_result.language)
@@ -176,8 +179,10 @@ async def analyze_youtube(body: YouTubeRequest) -> TranscriptResult:
 
         logger.info("[%s] YouTube audio ready: %s", job_id, wav_path)
 
-        svc = TranscribeService(settings)
-        ws_result = await svc.transcribe(wav_path, body.language)
+        if not settings.elevenlabs_api_key:
+            raise HTTPException(status_code=500, detail="ELEVENLABS_API_KEY not configured.")
+        svc = ElevenLabsTranscribeService(settings.elevenlabs_api_key, settings.elevenlabs_stt_model)
+        ws_result = await loop.run_in_executor(None, svc.transcribe, wav_path, body.language)
 
         logger.info("[%s] Transcription done: %d segments, lang=%s",
                     job_id, len(ws_result.segments), ws_result.language)
@@ -358,9 +363,11 @@ async def analyze_teaching(file: UploadFile) -> AnalysisResponse:
             raise HTTPException(status_code=500, detail=str(exc))
 
         loop = asyncio.get_running_loop()
-        bedrock_svc = BedrockTranscriptionService(settings)
+        if not settings.elevenlabs_api_key:
+            raise HTTPException(status_code=500, detail="ELEVENLABS_API_KEY not configured.")
 
-        transcript_future = loop.run_in_executor(None, bedrock_svc.transcribe, wav_path)
+        transcribe_svc = ElevenLabsTranscribeService(settings.elevenlabs_api_key, settings.elevenlabs_stt_model)
+        transcript_future = loop.run_in_executor(None, transcribe_svc.transcribe, wav_path, "auto")
         analysis_future = loop.run_in_executor(
             None,
             calculate_fluctuation_timeline,
@@ -369,22 +376,14 @@ async def analyze_teaching(file: UploadFile) -> AnalysisResponse:
         )
 
         try:
-            transcript, timeline_raw = await asyncio.gather(
+            transcribe_result, timeline_raw = await asyncio.gather(
                 transcript_future, analysis_future,
             )
         except RuntimeError as exc:
             logger.error("Transcription / analysis error: %s", exc)
             raise HTTPException(status_code=502, detail=str(exc))
 
-        # --- Evaluate transcript against the teaching rubric -----------
-        eval_svc = EvaluationService(settings)
-        try:
-            evaluation = await loop.run_in_executor(
-                None, eval_svc.evaluate, transcript,
-            )
-        except RuntimeError as exc:
-            logger.error("Evaluation error: %s", exc)
-            raise HTTPException(status_code=502, detail=str(exc))
+        transcript = transcribe_result.full_text
 
         timeline = [FluctuationWindow(**w) for w in timeline_raw]
 
@@ -393,7 +392,6 @@ async def analyze_teaching(file: UploadFile) -> AnalysisResponse:
             status="success",
             transcript=transcript,
             fluctuation_timeline=timeline,
-            evaluation=evaluation,
         )
 
     finally:

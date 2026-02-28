@@ -1,6 +1,7 @@
 import logging
 import shutil
 from pathlib import Path
+from typing import Optional
 
 import ffmpeg
 
@@ -29,8 +30,15 @@ def _find_ffmpeg() -> str:
     )
 
 
-# Resolve once at import time so every call reuses the same binary.
-FFMPEG_BIN = _find_ffmpeg()
+_ffmpeg_bin: Optional[str] = None
+
+
+def _get_ffmpeg_bin() -> str:
+    """Return the ffmpeg binary path, resolving lazily so the app can start without ffmpeg."""
+    global _ffmpeg_bin
+    if _ffmpeg_bin is None:
+        _ffmpeg_bin = _find_ffmpeg()
+    return _ffmpeg_bin
 
 
 def extract_audio(input_path: str, output_path: str) -> str:
@@ -53,7 +61,7 @@ def extract_audio(input_path: str, output_path: str) -> str:
             .input(input_path, err_detect="ignore_err")
             .output(output_path, ac=1, ar=16000, acodec="pcm_s16le")
             .overwrite_output()
-            .run(cmd=FFMPEG_BIN, capture_stdout=True, capture_stderr=True)
+            .run(cmd=_get_ffmpeg_bin(), capture_stdout=True, capture_stderr=True)
         )
     except ffmpeg.Error as exc:
         stderr_text = exc.stderr.decode("utf-8", errors="replace") if exc.stderr else "unknown"

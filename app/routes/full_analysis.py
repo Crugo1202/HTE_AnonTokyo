@@ -41,7 +41,7 @@ from app.services.placeholder_data import (
     load_placeholder_body_language,
 )
 from app.services.session_stats import stats as session_stats
-from app.services.whisper_service import WhisperService
+from app.services.elevenlabs_transcribe import ElevenLabsTranscribeService
 from app.services.youtube_service import YouTubeDownloader, is_valid_youtube_url
 
 logger = logging.getLogger(__name__)
@@ -132,8 +132,7 @@ async def full_analysis_file(
 
     # ── Live analysis pipeline ────────────────────────────────────────────
     api_key = settings.gemini_api_key
-    if not api_key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured.")
+    use_gemini = bool(api_key)
 
     filename = file.filename or "upload"
     ext = Path(filename).suffix.lower()
@@ -167,7 +166,9 @@ async def full_analysis_file(
         await loop.run_in_executor(None, extract_audio, raw_path, wav_path)
         logger.info("[%s] Audio extracted", job_id)
 
-        svc = WhisperService(settings)
+        if not settings.elevenlabs_api_key:
+            raise HTTPException(status_code=500, detail="ELEVENLABS_API_KEY not configured.")
+        svc = ElevenLabsTranscribeService(settings.elevenlabs_api_key, settings.elevenlabs_stt_model)
         ws_result = await loop.run_in_executor(None, svc.transcribe, wav_path, language)
         transcript_result = _build_transcript_result(ws_result, job_id)
         logger.info("[%s] Transcription done: %d segments", job_id, len(ws_result.segments))
@@ -175,26 +176,34 @@ async def full_analysis_file(
         # Step 2: Body language analysis (only for video files)
         body_language: BodyLanguageSummary | None = None
         if ext in VIDEO_EXTENSIONS:
-            file_uri = await loop.run_in_executor(
-                None, upload_video_to_gemini, api_key, raw_path,
-            )
-            duration = await loop.run_in_executor(None, get_video_duration, raw_path)
-            bl_results = await loop.run_in_executor(
-                None,
-                analyze_body_language,
-                api_key, model, file_uri, duration, output_dir, segment_duration,
-            )
-            body_language = _build_body_language_summary(bl_results, model, output_dir)
-            logger.info("[%s] Body language analysis done: %d segments", job_id, len(bl_results))
+            if use_gemini:
+                file_uri = await loop.run_in_executor(
+                    None, upload_video_to_gemini, api_key, raw_path,
+                )
+                duration = await loop.run_in_executor(None, get_video_duration, raw_path)
+                bl_results = await loop.run_in_executor(
+                    None,
+                    analyze_body_language,
+                    api_key, model, file_uri, duration, output_dir, segment_duration,
+                )
+                body_language = _build_body_language_summary(bl_results, model, output_dir)
+                logger.info("[%s] Body language analysis done: %d segments", job_id, len(bl_results))
+            else:
+                body_language = load_placeholder_body_language()
+                logger.info("[%s] Body language: using fallback from body_language_analysis/", job_id)
 
-        # Step 3: Rubric evaluation via Gemini
+        # Step 3: Rubric evaluation (Gemini or fallback)
         bl_report = body_language.combined_report if body_language else None
-        rubric_evaluation = await loop.run_in_executor(
-            None,
-            evaluate_with_gemini,
-            api_key, model, ws_result.full_text, bl_report,
-        )
-        logger.info("[%s] Rubric evaluation done", job_id)
+        if use_gemini:
+            rubric_evaluation = await loop.run_in_executor(
+                None,
+                evaluate_with_gemini,
+                api_key, model, ws_result.full_text, bl_report,
+            )
+            logger.info("[%s] Rubric evaluation done", job_id)
+        else:
+            rubric_evaluation = PLACEHOLDER_RUBRIC_EVALUATION
+            logger.info("[%s] Rubric: using fallback from body_language_analysis/", job_id)
         session_stats.full_analyses += 1
         return FullAnalysisResponse(
             job_id=job_id,
@@ -246,8 +255,7 @@ async def full_analysis_youtube(body: FullAnalysisRequest) -> FullAnalysisRespon
 
     # ── Live analysis pipeline ────────────────────────────────────────────
     api_key = body.gemini_api_key or settings.gemini_api_key
-    if not api_key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured.")
+    use_gemini = bool(api_key)
 
     if not is_valid_youtube_url(body.url):
         raise HTTPException(status_code=400, detail="Invalid YouTube URL.")
@@ -274,7 +282,9 @@ async def full_analysis_youtube(body: FullAnalysisRequest) -> FullAnalysisRespon
         logger.info("[%s] YouTube audio ready: %s", job_id, wav_path)
 
         # Step 1: Transcribe
-        svc = WhisperService(settings)
+        if not settings.elevenlabs_api_key:
+            raise HTTPException(status_code=500, detail="ELEVENLABS_API_KEY not configured.")
+        svc = ElevenLabsTranscribeService(settings.elevenlabs_api_key, settings.elevenlabs_stt_model)
         ws_result = await loop.run_in_executor(
             None, svc.transcribe, wav_path, body.language,
         )
@@ -282,25 +292,33 @@ async def full_analysis_youtube(body: FullAnalysisRequest) -> FullAnalysisRespon
         logger.info("[%s] Transcription done: %d segments", job_id, len(ws_result.segments))
 
         # Step 2: Body language analysis
-        file_uri = await loop.run_in_executor(
-            None, upload_video_to_gemini, api_key, video_path,
-        )
-        duration = await loop.run_in_executor(None, get_video_duration, video_path)
-        bl_results = await loop.run_in_executor(
-            None,
-            analyze_body_language,
-            api_key, model, file_uri, duration, output_dir, body.segment_duration,
-        )
-        body_language = _build_body_language_summary(bl_results, model, output_dir)
-        logger.info("[%s] Body language analysis done: %d segments", job_id, len(bl_results))
+        if use_gemini:
+            file_uri = await loop.run_in_executor(
+                None, upload_video_to_gemini, api_key, video_path,
+            )
+            duration = await loop.run_in_executor(None, get_video_duration, video_path)
+            bl_results = await loop.run_in_executor(
+                None,
+                analyze_body_language,
+                api_key, model, file_uri, duration, output_dir, body.segment_duration,
+            )
+            body_language = _build_body_language_summary(bl_results, model, output_dir)
+            logger.info("[%s] Body language analysis done: %d segments", job_id, len(bl_results))
+        else:
+            body_language = load_placeholder_body_language()
+            logger.info("[%s] Body language: using fallback from body_language_analysis/", job_id)
 
-        # Step 3: Rubric evaluation via Gemini
-        rubric_evaluation = await loop.run_in_executor(
-            None,
-            evaluate_with_gemini,
-            api_key, model, ws_result.full_text, body_language.combined_report,
-        )
-        logger.info("[%s] Rubric evaluation done", job_id)
+        # Step 3: Rubric evaluation (Gemini or fallback)
+        if use_gemini:
+            rubric_evaluation = await loop.run_in_executor(
+                None,
+                evaluate_with_gemini,
+                api_key, model, ws_result.full_text, body_language.combined_report,
+            )
+            logger.info("[%s] Rubric evaluation done", job_id)
+        else:
+            rubric_evaluation = PLACEHOLDER_RUBRIC_EVALUATION
+            logger.info("[%s] Rubric: using fallback from body_language_analysis/", job_id)
         session_stats.full_analyses += 1
         return FullAnalysisResponse(
             job_id=job_id,

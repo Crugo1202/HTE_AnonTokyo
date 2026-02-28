@@ -5,13 +5,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
-    # ── OpenAI Whisper (primary STT) ────────────────────────────────────
-    openai_api_key: str = ""
-    whisper_model: str = "whisper-1"          # only model Whisper API exposes
-    # Max bytes per Whisper API chunk (25 MB hard limit; we use 23 MB to be safe)
-    whisper_chunk_bytes: int = 23 * 1024 * 1024
+    # ── ElevenLabs Speech-to-Text (Scribe API) ───────────────────────────
+    elevenlabs_api_key: str = ""
+    elevenlabs_stt_model: str = "scribe_v2"
 
     # ── Google Gemini (body language analysis) ──────────────────────────
     gemini_api_key: str = ""
@@ -22,12 +24,7 @@ class Settings(BaseSettings):
     minimax_model: str = "MiniMax-M2.5"
     minimax_base_url: str = "https://api.minimax.io/anthropic"
 
-    # ── AWS (kept for voice-analysis / Bedrock features) ────────────────
-    aws_region: str = "us-east-1"
-    aws_access_key_id: str = ""
-    aws_secret_access_key: str = ""
-    transcribe_language_code: str = "en-US"
-    bedrock_evaluation_model_id: str = "amazon.nova-pro-v1:0"
+    # ── Misc ────────────────────────────────────────────────────────────
     fluctuation_window_seconds: int = 180
     temp_dir: str = tempfile.gettempdir()
     # Max video file size accepted (bytes).  Default = 500 MB.

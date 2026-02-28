@@ -7,7 +7,8 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  LAMBDA_FUNCTION_NAME: hte-anontokyo-api
+  LAMBDA_FUNCTION_NAME: hte-anontokyo-api-image
+  ECR_REPOSITORY: hte-anontokyo
 
 permissions:
   id-token: write
@@ -22,38 +23,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Build frontend assets
-        working-directory: frontend
-        run: |
-          npm ci
-          npm run build
-
-      - name: Build Lambda deployment bundle
-        run: |
-          python -m pip install --upgrade pip
-          mkdir -p package
-          python -m pip install -r requirements.txt -t package
-          cp -R app package/app
-          cp -R body_language_analysis package/body_language_analysis
-          cp -R frontend/dist package/static
-          (cd package && zip -r ../lambda_bundle.zip .)
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Lambda image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: lambda-${{ github.sha }}
+        run: |
+          docker build \
+            -f Dockerfile.lambda \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:lambda-latest \
+            .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:lambda-latest
+          echo "image_uri=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Verify Lambda function exists
         run: |
@@ -65,12 +59,24 @@ jobs:
         run: |
           aws lambda update-function-code \
             --function-name "$LAMBDA_FUNCTION_NAME" \
-            --zip-file fileb://lambda_bundle.zip \
+            --image-uri "${{ steps.build-image.outputs.image_uri }}" \
             --publish \
             --region "$AWS_REGION"
           aws lambda wait function-updated \
             --function-name "$LAMBDA_FUNCTION_NAME" \
             --region "$AWS_REGION"
+
+      - name: Configure Lambda environment (API keys from GitHub Secrets)
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+        run: |
+          aws lambda update-function-configuration \
+            --function-name "$LAMBDA_FUNCTION_NAME" \
+            --region "$AWS_REGION" \
+            --environment "Variables={ELEVENLABS_API_KEY=$ELEVENLABS_API_KEY,GEMINI_API_KEY=$GEMINI_API_KEY,MINIMAX_API_KEY=$MINIMAX_API_KEY,MAX_UPLOAD_BYTES=524288000}" \
+            --output json > /dev/null
 
       - name: Invalidate CloudFront cache (if configured)
         env:

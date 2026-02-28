@@ -3,9 +3,10 @@ set -euo pipefail
 
 REGION="${AWS_REGION:-us-east-1}"
 APP_NAME="hte-anontokyo"
-LAMBDA_FUNCTION_NAME="hte-anontokyo-api"
+LAMBDA_FUNCTION_NAME="hte-anontokyo-api-image"
 LAMBDA_ROLE_NAME="hte-anontokyo-lambda-role"
-DIST_COMMENT="hte-anontokyo-lambda-cdn"
+DIST_COMMENT="hte-anontokyo-lambda-image-cdn"
+ECR_REPO="hte-anontokyo"
 
 ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
 ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${LAMBDA_ROLE_NAME}"
@@ -35,18 +36,6 @@ aws iam attach-role-policy \
   --policy-arn "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole" \
   >/dev/null || true
 
-# Optional SSM read access (if you later want to load secrets from SSM in code)
-aws iam put-role-policy \
-  --role-name "$LAMBDA_ROLE_NAME" \
-  --policy-name "HTEReadSSM" \
-  --policy-document "{
-    \"Version\": \"2012-10-17\",
-    \"Statement\": [{
-      \"Effect\": \"Allow\",
-      \"Action\": [\"ssm:GetParameter\", \"ssm:GetParameters\"],
-      \"Resource\": \"arn:aws:ssm:${REGION}:${ACCOUNT_ID}:parameter/hte/*\"
-    }]
-  }" >/dev/null
 echo "   Role ready: $ROLE_ARN"
 
 # ── 2. Ensure CloudWatch log group exists ────────────────────────────────────
@@ -59,71 +48,40 @@ if ! aws logs describe-log-groups \
   aws logs create-log-group --log-group-name "$LOG_GROUP" --region "$REGION" >/dev/null
 fi
 
-# ── 3. Create bootstrap Lambda if missing ────────────────────────────────────
+# ── 3. Ensure ECR repo + image-based Lambda exists ───────────────────────────
 echo "3) Ensuring Lambda function exists: ${LAMBDA_FUNCTION_NAME}"
+if ! aws ecr describe-repositories --repository-names "$ECR_REPO" --region "$REGION" >/dev/null 2>&1; then
+  aws ecr create-repository \
+    --repository-name "$ECR_REPO" \
+    --region "$REGION" >/dev/null
+fi
+
+LATEST_TAG="$(aws ecr describe-images \
+  --repository-name "$ECR_REPO" \
+  --region "$REGION" \
+  --query 'sort_by(imageDetails,&imagePushedAt)[-1].imageTags[0]' \
+  --output text 2>/dev/null || true)"
+
+if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "None" ]; then
+  echo "   No image tags found in ECR repo '$ECR_REPO'."
+  echo "   Push at least one image first, then re-run this script."
+  exit 1
+fi
+
+IMAGE_URI="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${ECR_REPO}:${LATEST_TAG}"
 if ! aws lambda get-function --function-name "$LAMBDA_FUNCTION_NAME" --region "$REGION" >/dev/null 2>&1; then
-  TMP_DIR="$(mktemp -d)"
-  cat > "${TMP_DIR}/lambda_function.py" <<'PY'
-def lambda_handler(event, context):
-    return {"statusCode": 200, "body": "Bootstrap OK. Deploy app bundle via GitHub Actions."}
-PY
-  (cd "$TMP_DIR" && zip -q function.zip lambda_function.py)
   aws lambda create-function \
     --function-name "$LAMBDA_FUNCTION_NAME" \
-    --runtime python3.12 \
-    --handler lambda_function.lambda_handler \
+    --package-type Image \
+    --code "ImageUri=${IMAGE_URI}" \
     --role "$ROLE_ARN" \
     --timeout 900 \
     --memory-size 2048 \
-    --zip-file "fileb://${TMP_DIR}/function.zip" \
     --region "$REGION" >/dev/null
-  rm -rf "$TMP_DIR"
 fi
 echo "   Lambda ready: ${LAMBDA_FUNCTION_NAME}"
 
-# ── 4. Configure Lambda env vars from SSM if available ──────────────────────
-echo "4) Syncing Lambda environment vars from SSM (if present)"
-get_param() {
-  local name="$1"
-  aws ssm get-parameter \
-    --name "$name" \
-    --with-decryption \
-    --region "$REGION" \
-    --query Parameter.Value \
-    --output text 2>/dev/null || true
-}
-
-OPENAI_API_KEY="$(get_param /hte/OPENAI_API_KEY)"
-GEMINI_API_KEY="$(get_param /hte/GEMINI_API_KEY)"
-MINIMAX_API_KEY="$(get_param /hte/MINIMAX_API_KEY)"
-
-ENV_FILE="$(mktemp)"
-OPENAI_API_KEY="$OPENAI_API_KEY" \
-GEMINI_API_KEY="$GEMINI_API_KEY" \
-MINIMAX_API_KEY="$MINIMAX_API_KEY" \
-python - <<'PY' > "$ENV_FILE"
-import json
-import os
-
-payload = {
-    "Variables": {
-        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", ""),
-        "GEMINI_API_KEY": os.getenv("GEMINI_API_KEY", ""),
-        "MINIMAX_API_KEY": os.getenv("MINIMAX_API_KEY", ""),
-        "MAX_UPLOAD_BYTES": "524288000",
-    }
-}
-print(json.dumps(payload))
-PY
-
-aws lambda update-function-configuration \
-  --function-name "$LAMBDA_FUNCTION_NAME" \
-  --region "$REGION" \
-  --environment "file://${ENV_FILE}" \
-  >/dev/null
-rm -f "$ENV_FILE"
-
-# ── 5. Function URL (public) ─────────────────────────────────────────────────
+# ── 4. Function URL (public) ─────────────────────────────────────────────────
 echo "5) Ensuring Lambda Function URL exists"
 if ! aws lambda get-function-url-config \
   --function-name "$LAMBDA_FUNCTION_NAME" \
@@ -143,6 +101,15 @@ aws lambda add-permission \
   --function-url-auth-type NONE \
   --region "$REGION" >/dev/null 2>&1 || true
 
+# Required since Oct 2025: both InvokeFunctionUrl and InvokeFunction
+aws lambda add-permission \
+  --function-name "$LAMBDA_FUNCTION_NAME" \
+  --statement-id "FunctionURLInvokeFunction" \
+  --action "lambda:InvokeFunction" \
+  --principal "*" \
+  --invoked-via-function-url \
+  --region "$REGION" >/dev/null 2>&1 || true
+
 FUNCTION_URL="$(aws lambda get-function-url-config \
   --function-name "$LAMBDA_FUNCTION_NAME" \
   --region "$REGION" \
@@ -151,8 +118,8 @@ FUNCTION_URL="$(aws lambda get-function-url-config \
 FUNCTION_HOST="$(echo "$FUNCTION_URL" | sed -E 's#https://([^/]+)/?#\1#')"
 echo "   Function URL: $FUNCTION_URL"
 
-# ── 6. CloudFront distribution ───────────────────────────────────────────────
-echo "6) Ensuring CloudFront distribution exists"
+# ── 5. CloudFront distribution ───────────────────────────────────────────────
+echo "5) Ensuring CloudFront distribution exists"
 DIST_ID="$(aws cloudfront list-distributions \
   --query "DistributionList.Items[?Comment=='${DIST_COMMENT}'].Id | [0]" \
   --output text)"
@@ -221,7 +188,10 @@ echo "Lambda Function URL:        ${FUNCTION_URL}"
 echo "CloudFront Distribution ID: ${DIST_ID}"
 echo "CloudFront Domain:          https://${CF_DOMAIN}"
 echo ""
-echo "GitHub secrets to set:"
-echo "  AWS_ACCESS_KEY_ID"
-echo "  AWS_SECRET_ACCESS_KEY"
-echo "  CLOUDFRONT_DISTRIBUTION_ID=${DIST_ID}"
+echo "GitHub Secrets (Settings → Secrets and variables → Actions):"
+echo "  AWS_ACCESS_KEY_ID       - AWS deployer access key"
+echo "  AWS_SECRET_ACCESS_KEY   - AWS deployer secret key"
+echo "  ELEVENLABS_API_KEY     - ElevenLabs API key (Speech-to-Text)"
+echo "  GEMINI_API_KEY         - Google Gemini API key (body language, rubric)"
+echo "  MINIMAX_API_KEY        - Minimax API key (AI feedback)"
+echo "  CLOUDFRONT_DISTRIBUTION_ID = ${DIST_ID}"

@@ -8,11 +8,10 @@ boto3
 pydantic-settings
 python-dotenv
 # STT & YouTube
-openai>=1.30.0
+requests>=2.31.0
 yt-dlp>=2024.5.0
 pydub>=0.25.1
-# Amazon Transcribe (legacy streaming endpoint)
-amazon-transcribe
+# ElevenLabs Speech-to-Text (Scribe API)
 # Gemini body-language analysis
 google-genai>=1.0.0
 # Minimax LLM feedback (Anthropic-compatible SDK)

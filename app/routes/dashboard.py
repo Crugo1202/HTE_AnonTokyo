@@ -26,9 +26,9 @@ def get_dashboard() -> DashboardResponse:
 
     services = [
         ServiceStatus(
-            name="whisper",
-            configured=bool(settings.openai_api_key),
-            label="OpenAI Whisper (Transcription)",
+            name="elevenlabs",
+            configured=bool(settings.elevenlabs_api_key),
+            label="ElevenLabs Speech-to-Text",
         ),
         ServiceStatus(
             name="gemini",
@@ -43,11 +43,11 @@ def get_dashboard() -> DashboardResponse:
     ]
 
     capabilities: list[str] = []
-    if settings.openai_api_key:
+    if settings.elevenlabs_api_key:
         capabilities.append("transcription")
     if settings.gemini_api_key:
         capabilities.append("body-language-analysis")
-    if settings.openai_api_key and settings.gemini_api_key:
+    if settings.elevenlabs_api_key and settings.gemini_api_key:
         capabilities.append("full-analysis")
     if settings.minimax_api_key:
         capabilities.append("ai-feedback")
