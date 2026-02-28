@@ -1,0 +1,33 @@
+{
+  "name": "hte-frontend-expo",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "bash scripts/start-web.sh"
+  },
+  "dependencies": {
+    "expo": "^55.0.4",
+    "expo-av": "~14.0.0",
+    "expo-constants": "~16.0.0",
+    "expo-document-picker": "~12.0.0",
+    "expo-font": "~12.0.0",
+    "expo-linking": "~7.0.0",
+    "expo-router": "~3.5.0",
+    "expo-status-bar": "~2.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-native": "^0.84.1",
+    "react-native-document-picker": "~9.1.0",
+    "react-native-safe-area-context": "~5.0.0",
+    "react-native-web": "~0.20.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@types/react": "^19.0.0",
+    "typescript": "~5.3.3"
+  },
+  "private": true
+}

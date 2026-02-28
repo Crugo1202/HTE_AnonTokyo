@@ -1,22 +1,27 @@
 /**
  * Application Header Component
- * 
- * Displays the VoiceTrace branding and provides theme toggle functionality
- * Props:
- * - theme: Current theme setting (light/dark)
- * - onToggle: Callback function to switch theme
+ *
+ * Displays the VoiceTrace branding, centered tab navigation, and theme toggle.
  */
 import { Mic, Sun, Moon } from 'lucide-react'
-import type { Theme } from '../types'
+import type { LucideIcon } from 'lucide-react'
+import type { Theme, AppTab } from '../types'
 
-interface HeaderProps {
-  /** Current active theme: 'light' or 'dark' */
-  theme: Theme
-  /** Callback to toggle between light and dark theme */
-  onToggle: () => void
+interface TabConfig {
+  key: AppTab
+  label: string
+  icon: LucideIcon
 }
 
-export default function Header({ theme, onToggle }: HeaderProps) {
+interface HeaderProps {
+  theme: Theme
+  onToggle: () => void
+  activeTab: AppTab
+  onNavigate: (tab: AppTab) => void
+  tabs: TabConfig[]
+}
+
+export default function Header({ theme, onToggle, activeTab, onNavigate, tabs }: HeaderProps) {
   return (
     <header className="header">
       <div className="header-brand">
@@ -28,6 +33,20 @@ export default function Header({ theme, onToggle }: HeaderProps) {
           <div className="header-subtitle">AI Transcription</div>
         </div>
       </div>
+
+      <nav className="header-nav tab-nav">
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            type="button"
+            className={`tab-btn ${activeTab === tab.key ? 'active' : ''}`}
+            onClick={() => onNavigate(tab.key)}
+          >
+            <tab.icon size={18} />
+            {tab.label}
+          </button>
+        ))}
+      </nav>
 
       <button className="theme-toggle" onClick={onToggle} aria-label="Toggle theme">
         {theme === 'light' ? <Moon /> : <Sun />}

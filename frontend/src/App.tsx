@@ -19,11 +19,74 @@ import VoiceReport from './components/VoiceReport'
 import VideoGenerator from './components/VideoGenerator'
 import AnalysisResultView from './components/AnalysisResultView'
 import { transcribeFile, transcribeYoutube, fullAnalysisFile, fullAnalysisYoutube } from './services/api'
-import type { AppTab, AnalysisMode, InputMode, ProgressState, TranscriptResult, FullAnalysisResult } from './types'
+import type { AppTab, AnalysisMode, InputMode, ProgressState, TranscriptResult, FullAnalysisResult, AnalysisSummary } from './types'
 
 
 /** Default idle state for progress indicator */
 const IDLE_PROGRESS: ProgressState = { status: 'idle', percent: 0, message: '' }
+
+/** Fake analysis history for dashboard demo when no analyses have been run yet */
+const FAKE_ANALYSIS_HISTORY: AnalysisSummary[] = (() => {
+  const now = new Date()
+  const baseRubric = `# Lesson Observation (Sample)
+
+## 1. Teaching Organization
+### Learning Objective
+Score: 4 | Clear objectives, suited to learners' needs.
+
+### Organization of Learning Activities
+Score: 4 | Well-connected activities, smooth transitions.
+
+## 2. Communication Skills
+### Presentation
+Score: 4 | Clear, concise, systematic delivery.
+
+### Questioning Techniques
+Score: 3 | Checks understanding, could add more wait time.
+
+## 3. Class Interaction
+### Learning Atmosphere
+Score: 4 | Good rapport, supportive environment.
+
+## Final Summary
+Strong lesson with clear structure. Area for growth: extended wait time after questions.
+`
+  return [
+    {
+      id: 'fake-1',
+      videoSource: 'biology_mitosis_lesson.mp4',
+      createdAt: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+      overallScore: 72,
+      result: {
+        is_placeholder: true,
+        body_language: { segments: [], combined_report: 'Sample body language report.', model: 'demo' },
+        rubric_evaluation: baseRubric,
+      },
+    },
+    {
+      id: 'fake-2',
+      videoSource: 'https://www.youtube.com/watch?v=sample2',
+      createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      overallScore: 81,
+      result: {
+        is_placeholder: true,
+        body_language: { segments: [], combined_report: 'Sample body language report.', model: 'demo' },
+        rubric_evaluation: baseRubric,
+      },
+    },
+    {
+      id: 'fake-3',
+      videoSource: 'classroom_observation_jan.mp4',
+      createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      overallScore: 88,
+      result: {
+        is_placeholder: true,
+        body_language: { segments: [], combined_report: 'Sample body language report.', model: 'demo' },
+        rubric_evaluation: baseRubric,
+      },
+    },
+  ]
+})()
 
 const TABS: { key: AppTab; label: string; icon: typeof Mic }[] = [
   { key: 'dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
@@ -48,6 +111,8 @@ export default function App() {
   const [progress, setProgress] = useState<ProgressState>(IDLE_PROGRESS)
   const [transcriptResult, setTranscriptResult] = useState<TranscriptResult | null>(null)
   const [analysisResult, setAnalysisResult] = useState<FullAnalysisResult | null>(null)
+  const [analysisHistory, setAnalysisHistory] = useState<AnalysisSummary[]>(FAKE_ANALYSIS_HISTORY)
+  const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(FAKE_ANALYSIS_HISTORY[FAKE_ANALYSIS_HISTORY.length - 1]?.id ?? null)
 
   const isProcessing =
     progress.status !== 'idle' &&
@@ -69,11 +134,35 @@ export default function App() {
           })
           setProgress({ status: 'done', percent: 100, message: 'Analysis complete!' })
           setAnalysisResult(data)
+          const id = crypto.randomUUID()
+          const videoSource = file.name
+          const overallScore = 65 + (id.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 30)
+          setAnalysisHistory(prev => [...prev, {
+            id,
+            videoSource,
+            createdAt: new Date().toISOString(),
+            result: data,
+            overallScore,
+          }])
+          setSelectedAnalysisId(id)
+          setActiveTab('dashboard')
         } else if (inputMode === 'youtube' && youtubeUrl.trim()) {
           setProgress({ status: 'analyzing', percent: 20, message: 'Fetching & analysing video…' })
           const data = await fullAnalysisYoutube({ url: youtubeUrl.trim(), language, usePlaceholder })
           setProgress({ status: 'done', percent: 100, message: 'Analysis complete!' })
           setAnalysisResult(data)
+          const id = crypto.randomUUID()
+          const videoSource = youtubeUrl.trim()
+          const overallScore = 65 + (id.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 30)
+          setAnalysisHistory(prev => [...prev, {
+            id,
+            videoSource,
+            createdAt: new Date().toISOString(),
+            result: data,
+            overallScore,
+          }])
+          setSelectedAnalysisId(id)
+          setActiveTab('dashboard')
         }
       } else {
         // Transcribe-only mode
@@ -121,26 +210,23 @@ export default function App() {
 
   return (
     <div className="app-wrapper">
-      <Header theme={theme} onToggle={toggle} />
+      <Header
+        theme={theme}
+        onToggle={toggle}
+        activeTab={activeTab}
+        onNavigate={tab => setActiveTab(tab)}
+        tabs={TABS}
+      />
 
-      {/* ── Tab Navigation ──────────────────────────────────────────────── */}
-      <nav className="tab-nav">
-        {TABS.map(tab => (
-          <button
-            key={tab.key}
-            className={`tab-btn ${activeTab === tab.key ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            <tab.icon size={18} />
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
-      <main className="main-content">
+      <main className={`main-content ${activeTab === 'dashboard' ? 'main-content--dashboard' : ''}`}>
         {/* ─── Tab: Dashboard ─────────────────────────────────────────── */}
         {activeTab === 'dashboard' && (
-          <Dashboard onNavigate={(tab) => setActiveTab(tab as AppTab)} />
+          <Dashboard
+            analyses={analysisHistory}
+            selectedAnalysisId={selectedAnalysisId}
+            onSelectAnalysis={setSelectedAnalysisId}
+            onNavigate={(tab) => setActiveTab(tab as AppTab)}
+          />
         )}
 
         {/* ─── Tab: Transcribe ────────────────────────────────────────── */}
