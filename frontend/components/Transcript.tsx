@@ -5,9 +5,8 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Platform,
 } from 'react-native';
-import { COLORS, FONTS } from '@/utils/constants';
+import { COLORS, FONTS, SPACING } from '@/utils/constants';
 
 interface TranscriptProps {
   transcript: string;
@@ -62,39 +61,46 @@ export default function Transcript({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.BACKGROUND,
+    backgroundColor: COLORS.SURFACE_1,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+    borderRadius: 0,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.BORDER,
   },
   headerText: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: FONTS.INTER,
+    fontWeight: '600',
     color: COLORS.TEXT,
-    fontWeight: '500',
   },
   toggleText: {
-    fontSize: 14,
+    fontSize: 10,
     fontFamily: FONTS.INTER,
-    color: COLORS.TEXT,
+    fontWeight: '500',
+    letterSpacing: 0.1,
+    lineHeight: 12,
     textTransform: 'uppercase',
+    color: COLORS.TEXT_SECONDARY,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    padding: SPACING.sm,
   },
   text: {
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: FONTS.INTER,
+    fontWeight: '400',
+    lineHeight: 32,
     color: COLORS.TEXT,
-    lineHeight: 22,
   },
 });

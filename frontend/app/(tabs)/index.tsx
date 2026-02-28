@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import FileUpload from '@/components/FileUpload';
 import { uploadAndAnalyze, UploadableFile } from '@/services/api';
 import { AnalysisResponse } from '@/types/api';
-import { COLORS, FONTS } from '@/utils/constants';
+import { COLORS, FONTS, SPACING } from '@/utils/constants';
 
 export default function UploadScreen() {
   const router = useRouter();
@@ -33,16 +33,14 @@ export default function UploadScreen() {
 
     try {
       const response: AnalysisResponse = await uploadAndAnalyze(selectedFile);
-      
-      // Create video URI for preview
+
       let videoUri = '';
       if (Platform.OS === 'web' && selectedFile instanceof File) {
         videoUri = URL.createObjectURL(selectedFile);
       } else {
         videoUri = (selectedFile as { uri: string }).uri || '';
       }
-      
-      // Navigate to dashboard with results
+
       router.push({
         pathname: '/(tabs)/dashboard',
         params: {
@@ -61,6 +59,10 @@ export default function UploadScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.appDetails}>
+        <Text style={styles.headline}>Teaching Analysis</Text>
+        <Text style={styles.lead}>Upload a lesson recording to get an AI summary, transcript, and fluctuation analysis.</Text>
+      </View>
       <FileUpload
         onFileSelect={handleFileSelect}
         isUploading={isUploading}
@@ -71,9 +73,10 @@ export default function UploadScreen() {
             style={[styles.uploadButton, isUploading && styles.uploadButtonDisabled]}
             onPress={handleUpload}
             disabled={isUploading}
+            activeOpacity={0.9}
           >
             {isUploading ? (
-              <ActivityIndicator color={COLORS.BACKGROUND} />
+              <ActivityIndicator color={COLORS.TEXT_ON_PRIMARY} />
             ) : (
               <Text style={styles.uploadButtonText}>Analyze Video</Text>
             )}
@@ -88,28 +91,52 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.BACKGROUND,
-    padding: 24,
+    padding: SPACING.md,
+    paddingHorizontal: SPACING.md,
     justifyContent: 'center',
+    maxWidth: 1280,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  appDetails: {
+    marginBottom: SPACING.xl,
+  },
+  headline: {
+    fontFamily: FONTS.INTER,
+    fontSize: 36,
+    fontWeight: '600',
+    lineHeight: 44,
+    letterSpacing: -0.01,
+    color: COLORS.TEXT,
+    marginBottom: SPACING.sm,
+  },
+  lead: {
+    fontFamily: FONTS.INTER,
+    fontSize: 22,
+    fontWeight: '400',
+    lineHeight: 36,
+    color: COLORS.TEXT_SECONDARY,
   },
   uploadButtonContainer: {
-    marginTop: 24,
+    marginTop: SPACING.lg,
     alignItems: 'center',
   },
   uploadButton: {
-    backgroundColor: COLORS.TEXT,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
+    backgroundColor: COLORS.PRIMARY,
+    paddingHorizontal: SPACING.md,
+    height: 40,
     minWidth: 160,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 0,
   },
   uploadButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.4,
   },
   uploadButtonText: {
-    color: COLORS.BACKGROUND,
-    fontSize: 14,
+    color: COLORS.TEXT_ON_PRIMARY,
+    fontSize: 16,
     fontFamily: FONTS.INTER,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });

@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import { COLORS, FONTS } from '@/utils/constants';
+import { COLORS, FONTS, SPACING } from '@/utils/constants';
 import { UploadableFile } from '@/services/api';
 
 interface FileUploadProps {
@@ -127,9 +127,10 @@ export default function FileUpload({
           style={styles.button}
           onPress={handleFilePick}
           disabled={isUploading}
+          activeOpacity={0.9}
         >
           {isUploading ? (
-            <ActivityIndicator color={COLORS.TEXT} />
+            <ActivityIndicator color={COLORS.TEXT_ON_PRIMARY} />
           ) : (
             <Text style={styles.buttonText}>Select File</Text>
           )}
@@ -153,15 +154,16 @@ export default function FileUpload({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, styles.nativeCard]}>
       <Text style={styles.label}>Upload MP4 Video</Text>
       <TouchableOpacity
         style={styles.button}
         onPress={handleFilePick}
         disabled={isUploading}
+        activeOpacity={0.9}
       >
         {isUploading ? (
-          <ActivityIndicator color={COLORS.TEXT} />
+          <ActivityIndicator color={COLORS.TEXT_ON_PRIMARY} />
         ) : (
           <Text style={styles.buttonText}>Select File</Text>
         )}
@@ -182,59 +184,72 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 32,
+    padding: SPACING.sm,
   },
   webContainer: {
-    borderWidth: 2,
+    borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: COLORS.BORDER,
-    backgroundColor: COLORS.BACKGROUND,
+    backgroundColor: COLORS.SURFACE_1,
     minHeight: 200,
+    borderRadius: 0,
+  },
+  nativeCard: {
+    backgroundColor: COLORS.SURFACE_1,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+    borderRadius: 0,
+    width: '100%',
   },
   dragging: {
-    borderColor: COLORS.TEXT,
-    backgroundColor: '#F5F5F5',
+    borderColor: COLORS.BORDER_HOVER,
+    backgroundColor: COLORS.SURFACE_2,
   },
   label: {
     fontSize: 18,
     fontFamily: FONTS.INTER,
-    color: COLORS.TEXT,
-    marginBottom: 8,
     fontWeight: '500',
+    color: COLORS.TEXT,
+    marginBottom: SPACING['2xs'],
   },
   hint: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: FONTS.INTER,
-    color: COLORS.PLACEHOLDER,
-    marginBottom: 24,
+    fontWeight: '400',
+    letterSpacing: 0.02,
+    lineHeight: 20,
+    color: COLORS.TEXT_SECONDARY,
+    marginBottom: SPACING.lg,
   },
   button: {
-    backgroundColor: COLORS.TEXT,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
+    backgroundColor: COLORS.PRIMARY,
+    paddingHorizontal: SPACING.md,
+    height: 40,
     minWidth: 120,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 0,
   },
   buttonText: {
-    color: COLORS.BACKGROUND,
-    fontSize: 14,
+    color: COLORS.TEXT_ON_PRIMARY,
+    fontSize: 16,
     fontFamily: FONTS.INTER,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   fileInfo: {
-    marginTop: 24,
+    marginTop: SPACING.lg,
     alignItems: 'center',
   },
   fileName: {
     fontSize: 14,
     fontFamily: FONTS.INTER,
     color: COLORS.TEXT,
-    marginBottom: 4,
+    marginBottom: SPACING['3xs'],
   },
   fileSize: {
     fontSize: 12,
     fontFamily: FONTS.INTER,
-    color: COLORS.PLACEHOLDER,
+    color: COLORS.TEXT_TERTIARY,
+    letterSpacing: 0.02,
   },
 });

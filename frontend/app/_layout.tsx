@@ -39,6 +39,7 @@ export default function RootLayout() {
         headerTitleStyle: {
           fontFamily: FONTS.INTER,
           fontWeight: '500',
+          color: COLORS.TEXT,
         },
         contentStyle: {
           backgroundColor: COLORS.BACKGROUND,

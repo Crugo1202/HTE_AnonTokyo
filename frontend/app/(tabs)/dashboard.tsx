@@ -13,7 +13,7 @@ import VideoPreview from '@/components/VideoPreview';
 import Transcript from '@/components/Transcript';
 import AnalysisPanel from '@/components/AnalysisPanel';
 import { FluctuationWindow } from '@/types/api';
-import { COLORS, FONTS } from '@/utils/constants';
+import { COLORS, FONTS, SPACING } from '@/utils/constants';
 
 export default function DashboardScreen() {
   const params = useLocalSearchParams();
@@ -50,7 +50,7 @@ export default function DashboardScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.emptyText}>No analysis data available</Text>
-        <TouchableOpacity style={styles.button} onPress={handleUploadNew}>
+        <TouchableOpacity style={styles.button} onPress={handleUploadNew} activeOpacity={0.9}>
           <Text style={styles.buttonText}>Upload New Video</Text>
         </TouchableOpacity>
       </View>
@@ -76,7 +76,7 @@ export default function DashboardScreen() {
           <AnalysisPanel timeline={timeline} />
         </View>
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={handleUploadNew}>
+          <TouchableOpacity style={styles.button} onPress={handleUploadNew} activeOpacity={0.9}>
             <Text style={styles.buttonText}>Upload New Video</Text>
           </TouchableOpacity>
         </View>
@@ -102,7 +102,7 @@ export default function DashboardScreen() {
         </View>
       </View>
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={handleUploadNew}>
+        <TouchableOpacity style={styles.button} onPress={handleUploadNew} activeOpacity={0.9}>
           <Text style={styles.buttonText}>Upload New Video</Text>
         </TouchableOpacity>
       </View>
@@ -116,11 +116,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.BACKGROUND,
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: SPACING.lg,
+    paddingHorizontal: SPACING.md,
   },
   webLayout: {
     flex: 1,
     flexDirection: 'row',
+    maxWidth: 1280,
+    alignSelf: 'center',
+    width: '100%',
   },
   leftColumn: {
     flex: 1,
@@ -131,51 +135,53 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   videoContainer: {
-    padding: 16,
+    padding: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.BORDER,
+    backgroundColor: COLORS.SURFACE_1,
   },
   mobileVideoContainer: {
     width: '100%',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   transcriptContainer: {
     flex: 1,
-    padding: 16,
+    padding: SPACING.sm,
   },
   mobileTranscriptContainer: {
     width: '100%',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   mobileAnalysisContainer: {
     width: '100%',
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.md,
   },
   buttonContainer: {
-    padding: 16,
+    padding: SPACING.md,
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: COLORS.BORDER,
   },
   button: {
-    backgroundColor: COLORS.TEXT,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
+    backgroundColor: COLORS.PRIMARY,
+    paddingHorizontal: SPACING.md,
+    height: 40,
     minWidth: 160,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 0,
   },
   buttonText: {
-    color: COLORS.BACKGROUND,
-    fontSize: 14,
-    fontFamily: FONTS.INTER,
-    fontWeight: '500',
-  },
-  emptyText: {
+    color: COLORS.TEXT_ON_PRIMARY,
     fontSize: 16,
     fontFamily: FONTS.INTER,
-    color: COLORS.TEXT,
+    fontWeight: '600',
+  },
+  emptyText: {
+    fontSize: 18,
+    fontFamily: FONTS.INTER,
+    color: COLORS.TEXT_SECONDARY,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: SPACING.lg,
   },
 });

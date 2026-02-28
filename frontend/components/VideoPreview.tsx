@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { COLORS } from '@/utils/constants';
 
@@ -17,7 +17,7 @@ export default function VideoPreview({ uri }: VideoPreviewProps) {
         source={{ uri }}
         style={styles.video}
         useNativeControls
-        resizeMode={ResizeMode.CONTAIN}
+        resizeMode={ResizeMode.COVER}
         isLooping={false}
       />
     </View>
@@ -27,8 +27,12 @@ export default function VideoPreview({ uri }: VideoPreviewProps) {
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    backgroundColor: COLORS.BACKGROUND,
+    backgroundColor: COLORS.SURFACE_1,
     aspectRatio: 16 / 9,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+    borderRadius: 0,
+    overflow: 'hidden',
   },
   video: {
     width: '100%',

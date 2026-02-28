@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { FluctuationWindow } from '@/types/api';
-import { COLORS, FONTS } from '@/utils/constants';
+import { COLORS, FONTS, SPACING } from '@/utils/constants';
 
 interface AnalysisPanelProps {
   timeline: FluctuationWindow[];
@@ -70,81 +70,103 @@ export default function AnalysisPanel({ timeline }: AnalysisPanelProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.BACKGROUND,
-    padding: 16,
+    backgroundColor: COLORS.SURFACE_1,
+    padding: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+    borderRadius: 0,
   },
   title: {
-    fontSize: 20,
+    fontSize: 36,
     fontFamily: FONTS.INTER,
-    color: COLORS.TEXT,
     fontWeight: '600',
-    marginBottom: 24,
+    lineHeight: 44,
+    letterSpacing: -0.01,
+    color: COLORS.TEXT,
+    marginBottom: SPACING.lg,
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 32,
-    paddingBottom: 24,
+    marginBottom: SPACING.xl,
+    paddingBottom: SPACING.lg,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.BORDER,
   },
   stat: {
     flex: 1,
     alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
+    backgroundColor: COLORS.BACKGROUND,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+    marginHorizontal: SPACING['2xs'],
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 10,
     fontFamily: FONTS.INTER,
-    color: COLORS.PLACEHOLDER,
-    marginBottom: 8,
+    fontWeight: '500',
+    letterSpacing: 0.1,
+    lineHeight: 12,
     textTransform: 'uppercase',
+    color: COLORS.TEXT_TERTIARY,
+    marginBottom: SPACING['2xs'],
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 36,
     fontFamily: FONTS.INTER,
+    fontWeight: '700',
+    lineHeight: 44,
     color: COLORS.TEXT,
-    fontWeight: '600',
   },
   timelineContainer: {
     flex: 1,
   },
   timelineTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: FONTS.INTER,
+    fontWeight: '600',
     color: COLORS.TEXT,
-    fontWeight: '500',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   timelineScroll: {
     flex: 1,
   },
   timelineItem: {
-    marginBottom: 16,
+    marginBottom: SPACING.md,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+    backgroundColor: COLORS.BACKGROUND,
   },
   timelineHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING['2xs'],
   },
   timelineTime: {
     fontSize: 12,
     fontFamily: FONTS.INTER,
-    color: COLORS.TEXT,
+    fontWeight: '400',
+    letterSpacing: 0.02,
+    color: COLORS.TEXT_SECONDARY,
   },
   timelineScore: {
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: FONTS.INTER,
-    color: COLORS.TEXT,
     fontWeight: '600',
+    color: COLORS.TEXT,
   },
   scoreBarContainer: {
-    height: 4,
-    backgroundColor: COLORS.BORDER,
+    height: 8,
+    backgroundColor: COLORS.BORDER_DIVIDER,
     width: '100%',
   },
   scoreBar: {
     height: '100%',
-    backgroundColor: COLORS.TEXT,
+    backgroundColor: COLORS.ACCENT,
   },
 });

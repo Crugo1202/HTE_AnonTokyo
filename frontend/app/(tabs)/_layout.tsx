@@ -10,11 +10,12 @@ export default function TabsLayout() {
           borderTopWidth: 1,
           borderTopColor: COLORS.BORDER,
         },
-        tabBarActiveTintColor: COLORS.TEXT,
-        tabBarInactiveTintColor: COLORS.PLACEHOLDER,
+        tabBarActiveTintColor: COLORS.PRIMARY,
+        tabBarInactiveTintColor: COLORS.TEXT_TERTIARY,
         tabBarLabelStyle: {
           fontFamily: FONTS.INTER,
           fontSize: 12,
+          fontWeight: '500',
         },
         headerShown: false,
       }}
