@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Text,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import FileUpload from '@/components/FileUpload';
@@ -58,68 +59,116 @@ export default function UploadScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.appDetails}>
-        <Text style={styles.headline}>Teaching Analysis</Text>
-        <Text style={styles.lead}>Upload a lesson recording to get an AI summary, transcript, and fluctuation analysis.</Text>
-      </View>
-      <FileUpload
-        onFileSelect={handleFileSelect}
-        isUploading={isUploading}
-      />
-      {selectedFile && (
-        <View style={styles.uploadButtonContainer}>
-          <TouchableOpacity
-            style={[styles.uploadButton, isUploading && styles.uploadButtonDisabled]}
-            onPress={handleUpload}
-            disabled={isUploading}
-            activeOpacity={0.9}
-          >
-            {isUploading ? (
-              <ActivityIndicator color={COLORS.TEXT_ON_PRIMARY} />
-            ) : (
-              <Text style={styles.uploadButtonText}>Analyze Video</Text>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.container}>
+        {/* Left column: Get Started + Upload */}
+        <View style={styles.leftColumn}>
+          <View style={styles.getStartedCard}>
+            <Text style={styles.getStartedTitle}>Get Started</Text>
+            <Text style={styles.getStartedLead}>
+              Upload a recording of you teaching and receive valuable AI powered insights
+            </Text>
+          </View>
+          <View style={styles.uploadZoneWrapper}>
+            <FileUpload
+              onFileSelect={handleFileSelect}
+              isUploading={isUploading}
+            />
+            {selectedFile && (
+              <View style={styles.uploadButtonContainer}>
+                <TouchableOpacity
+                  style={[styles.uploadButton, isUploading && styles.uploadButtonDisabled]}
+                  onPress={handleUpload}
+                  disabled={isUploading}
+                  activeOpacity={0.9}
+                >
+                  {isUploading ? (
+                    <ActivityIndicator color={COLORS.TEXT_ON_PRIMARY} />
+                  ) : (
+                    <Text style={styles.uploadButtonText}>Analyze Video</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             )}
-          </TouchableOpacity>
+          </View>
         </View>
-      )}
-    </View>
+
+        {/* Right column: Analyzed Videos */}
+        <View style={styles.rightColumn}>
+          <View style={styles.analyzedCard}>
+            <Text style={styles.analyzedTitle}>Analyzed Videos</Text>
+            <ScrollView
+              style={styles.analyzedList}
+              contentContainerStyle={styles.analyzedListContent}
+              showsVerticalScrollIndicator={true}
+            >
+              {/* Empty state for now; can be populated from state/API later */}
+              <Text style={styles.analyzedEmpty}>
+                No analyzed videos yet. Upload a video to get started.
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scroll: {
     flex: 1,
     backgroundColor: COLORS.BACKGROUND,
-    padding: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    justifyContent: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  container: {
+    flexDirection: 'row',
+    flex: 1,
     maxWidth: 1280,
     alignSelf: 'center',
     width: '100%',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.lg,
   },
-  appDetails: {
-    marginBottom: SPACING.xl,
+  leftColumn: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: SPACING.lg,
   },
-  headline: {
-    fontFamily: FONTS.INTER,
-    fontSize: 36,
-    fontWeight: '600',
-    lineHeight: 44,
-    letterSpacing: -0.01,
-    color: COLORS.TEXT,
-    marginBottom: SPACING.sm,
+  getStartedCard: {
+    backgroundColor: COLORS.SURFACE_1,
+    padding: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+    marginBottom: SPACING.lg,
   },
-  lead: {
+  getStartedTitle: {
     fontFamily: FONTS.INTER,
     fontSize: 22,
+    fontWeight: '600',
+    lineHeight: 28,
+    color: COLORS.TEXT,
+    marginBottom: SPACING.xs,
+  },
+  getStartedLead: {
+    fontFamily: FONTS.INTER,
+    fontSize: 18,
     fontWeight: '400',
-    lineHeight: 36,
+    lineHeight: 28,
     color: COLORS.TEXT_SECONDARY,
+  },
+  uploadZoneWrapper: {
+    flex: 1,
+    minHeight: 280,
   },
   uploadButtonContainer: {
     marginTop: SPACING.lg,
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   uploadButton: {
     backgroundColor: COLORS.PRIMARY,
@@ -138,5 +187,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: FONTS.INTER,
     fontWeight: '600',
+  },
+  rightColumn: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 400,
+  },
+  analyzedCard: {
+    flex: 1,
+    backgroundColor: COLORS.SURFACE_1,
+    padding: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+    minHeight: 400,
+  },
+  analyzedTitle: {
+    fontFamily: FONTS.INTER,
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.TEXT,
+    marginBottom: SPACING.sm,
+  },
+  analyzedList: {
+    flex: 1,
+  },
+  analyzedListContent: {
+    paddingBottom: SPACING.lg,
+  },
+  analyzedEmpty: {
+    fontFamily: FONTS.INTER,
+    fontSize: 14,
+    fontWeight: '400',
+    color: COLORS.TEXT_TERTIARY,
+    lineHeight: 20,
   },
 });

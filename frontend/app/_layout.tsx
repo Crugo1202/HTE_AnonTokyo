@@ -3,7 +3,9 @@ import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { Platform } from 'react-native';
 import { COLORS, FONTS } from '@/utils/constants';
-import fontMap from './fonts';
+import { UserProvider } from '@/context/UserContext';
+import { HeaderExtraProvider } from '@/context/HeaderExtraContext';
+import fontMap from '@/app/fonts';
 
 export default function RootLayout() {
   // Web: fontMap is {} (Inter via Google Fonts in useEffect). Native: fontMap loads local .ttf
@@ -29,6 +31,8 @@ export default function RootLayout() {
   }, []);
 
   return (
+    <UserProvider>
+    <HeaderExtraProvider>
     <Stack
       screenOptions={{
         headerStyle: {
@@ -47,5 +51,7 @@ export default function RootLayout() {
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
+    </HeaderExtraProvider>
+    </UserProvider>
   );
 }
