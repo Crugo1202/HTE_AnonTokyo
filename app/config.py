@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.1-pro-preview"
 
+    # ── Minimax LLM (teacher feedback via Anthropic SDK) ─────────────
+    minimax_api_key: str = ""
+    minimax_model: str = "MiniMax-M2.5"
+    minimax_base_url: str = "https://api.minimax.io/anthropic"
+
     # ── AWS (kept for voice-analysis / Bedrock features) ────────────────
     aws_region: str = "us-east-1"
     aws_access_key_id: str = ""

@@ -6,11 +6,16 @@
  * Routes:
  *   POST /api/analyze          → file upload → ffmpeg → whisper-cli → result
  *   POST /api/analyze/youtube  → yt-dlp → ffmpeg → whisper-cli → result
+ *   POST /api/tts              → MiniMax TTS speech synthesis
+ *   GET  /api/tts/voices       → Available TTS voices
+ *   POST /api/video/generate   → MiniMax Hailuo video generation
+ *   GET  /api/video/status/:id → Query video task status
  *
- * Dependencies: express, multer, uuid, cors (all in package.json)
+ * Dependencies: express, multer, cors, dotenv (all in package.json)
  * System deps:  ffmpeg, yt-dlp, whisper-cli (all via Homebrew)
  */
 
+import 'dotenv/config'
 import express from 'express'
 import multer from 'multer'
 import cors from 'cors'
@@ -24,7 +29,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const app = express()
 app.use(cors())
-app.use(express.json())
+app.use(express.json({ limit: '50mb' }))
+
+// ── MiniMax API configuration ──────────────────────────────────────────────
+// NOTE: sk-cp- (Coding Plan) keys use the GLOBAL endpoint  api.minimax.io
+//       sk-api- keys use the CN domestic endpoint api.minimaxi.com
+const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || 'sk-cp-m2SNifDQZHRZXIkHjHQakxYVXi2pCiDWhqG8fMQoZJg5oJkp-eoUoWMm9xB8bW7GUuNVSXn3Xdu9p3Prkn68InYYFlRphv1n-jUkq6KIPV6j27vyPsM_lsA'
+const MINIMAX_BASE = 'https://api.minimax.io/v1'
 
 const TMP_DIR = path.join(__dirname, '.tmp')
 fs.mkdirSync(TMP_DIR, { recursive: true })
@@ -236,6 +247,153 @@ app.post('/api/analyze/youtube', async (req, res) => {
     res.status(500).json({ detail: err.message })
   } finally {
     cleanup(jobDir)
+  }
+})
+
+// ── MiniMax TTS (Text-to-Speech) ──────────────────────────────────────────
+
+/** POST /api/tts — Generate voice audio from text using MiniMax Speech API */
+app.post('/api/tts', async (req, res) => {
+  try {
+    const { text, voice_id = 'male-qn-qingse', speed = 1, emotion = 'neutral', language_boost = 'auto' } = req.body || {}
+    if (!text) return res.status(400).json({ detail: 'Missing text field' })
+    if (text.length > 10000) return res.status(400).json({ detail: 'Text exceeds 10000 character limit' })
+
+    console.log(`\n[TTS] Generating speech (${text.length} chars, voice: ${voice_id}) …`)
+
+    const response = await fetch(`${MINIMAX_BASE}/t2a_v2`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${MINIMAX_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'speech-02-hd',
+        text,
+        stream: false,
+        voice_setting: { voice_id, speed, vol: 1, pitch: 0, emotion },
+        audio_setting: { sample_rate: 32000, bitrate: 128000, format: 'mp3', channel: 1 },
+        language_boost,
+        output_format: 'url',
+      }),
+    })
+
+    const data = await response.json()
+
+    if (data.base_resp?.status_code !== 0) {
+      console.error('[TTS] API error:', data.base_resp)
+      return res.status(502).json({ detail: data.base_resp?.status_msg || 'TTS API error' })
+    }
+
+    console.log(`[TTS] ✓ Generated ${data.extra_info?.audio_length}ms audio`)
+    res.json({
+      audio_url: data.data?.audio,
+      duration_ms: data.extra_info?.audio_length || 0,
+      sample_rate: data.extra_info?.audio_sample_rate || 32000,
+      word_count: data.extra_info?.word_count || 0,
+      format: data.extra_info?.audio_format || 'mp3',
+    })
+  } catch (err) {
+    console.error('[TTS] Error:', err.message)
+    res.status(500).json({ detail: err.message })
+  }
+})
+
+/** GET /api/tts/voices — Return available TTS voices */
+app.get('/api/tts/voices', (_req, res) => {
+  res.json({
+    voices: [
+      { id: 'male-qn-qingse', name: 'Qingse (Male)', lang: 'zh' },
+      { id: 'male-qn-jingying', name: 'Jingying (Male)', lang: 'zh' },
+      { id: 'male-qn-badao', name: 'Badao (Male)', lang: 'zh' },
+      { id: 'male-qn-daxuesheng', name: 'Student (Male)', lang: 'zh' },
+      { id: 'female-shaonv', name: 'Shaonv (Female)', lang: 'zh' },
+      { id: 'female-yujie', name: 'Yujie (Female)', lang: 'zh' },
+      { id: 'female-chengshu', name: 'Chengshu (Female)', lang: 'zh' },
+      { id: 'female-tianmei', name: 'Tianmei (Female)', lang: 'zh' },
+      { id: 'presenter_male', name: 'Presenter (Male)', lang: 'en' },
+      { id: 'presenter_female', name: 'Presenter (Female)', lang: 'en' },
+      { id: 'audiobook_male_1', name: 'Audiobook (Male)', lang: 'en' },
+      { id: 'audiobook_female_1', name: 'Audiobook (Female)', lang: 'en' },
+    ],
+    emotions: ['neutral', 'happy', 'sad', 'angry', 'fearful', 'disgusted', 'surprised'],
+  })
+})
+
+// ── MiniMax Video Generation ──────────────────────────────────────────────
+
+/** POST /api/video/generate — Create video generation task */
+app.post('/api/video/generate', async (req, res) => {
+  try {
+    const { prompt, duration = 6, resolution = '768P', model = 'T2V-01' } = req.body || {}
+    if (!prompt) return res.status(400).json({ detail: 'Missing prompt field' })
+
+    console.log(`\n[Video] Creating generation task (${prompt.slice(0, 80)}…)`)
+
+    const response = await fetch(`${MINIMAX_BASE}/video_generation`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${MINIMAX_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ model, prompt, duration, resolution }),
+    })
+
+    const data = await response.json()
+
+    if (data.base_resp?.status_code !== 0) {
+      console.error('[Video] API error:', data.base_resp)
+      return res.status(502).json({ detail: data.base_resp?.status_msg || 'Video API error' })
+    }
+
+    console.log(`[Video] ✓ Task created: ${data.task_id}`)
+    res.json({ task_id: data.task_id })
+  } catch (err) {
+    console.error('[Video] Error:', err.message)
+    res.status(500).json({ detail: err.message })
+  }
+})
+
+/** GET /api/video/status/:taskId — Query video generation task status */
+app.get('/api/video/status/:taskId', async (req, res) => {
+  try {
+    const { taskId } = req.params
+    const response = await fetch(`${MINIMAX_BASE}/query/video_generation?task_id=${taskId}`, {
+      headers: { 'Authorization': `Bearer ${MINIMAX_API_KEY}` },
+    })
+
+    const data = await response.json()
+
+    if (data.base_resp?.status_code !== 0) {
+      return res.status(502).json({ detail: data.base_resp?.status_msg || 'Query API error' })
+    }
+
+    const result = {
+      task_id: data.task_id,
+      status: data.status,
+      file_id: data.file_id || null,
+      video_width: data.video_width || null,
+      video_height: data.video_height || null,
+    }
+
+    // If success, also fetch download URL
+    if (data.status === 'Success' && data.file_id) {
+      try {
+        const dlRes = await fetch(`${MINIMAX_BASE}/files/retrieve?file_id=${data.file_id}`, {
+          headers: { 'Authorization': `Bearer ${MINIMAX_API_KEY}` },
+        })
+        const dlData = await dlRes.json()
+        if (dlData.file?.download_url) {
+          result.download_url = dlData.file.download_url
+        }
+      } catch { /* download URL fetch failed, client can retry */ }
+    }
+
+    console.log(`[Video] Status ${taskId}: ${data.status}`)
+    res.json(result)
+  } catch (err) {
+    console.error('[Video] Status error:', err.message)
+    res.status(500).json({ detail: err.message })
   }
 })
 

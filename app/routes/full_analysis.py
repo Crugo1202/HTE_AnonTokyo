@@ -40,6 +40,7 @@ from app.services.placeholder_data import (
     PLACEHOLDER_VIDEO_SOURCE,
     load_placeholder_body_language,
 )
+from app.services.session_stats import stats as session_stats
 from app.services.whisper_service import WhisperService
 from app.services.youtube_service import YouTubeDownloader, is_valid_youtube_url
 
@@ -119,6 +120,7 @@ async def full_analysis_file(
 
     if use_placeholder:
         body_language = load_placeholder_body_language()
+        session_stats.full_analyses += 1
         return FullAnalysisResponse(
             job_id=job_id,
             video_source=file.filename or "upload",
@@ -193,7 +195,7 @@ async def full_analysis_file(
             api_key, model, ws_result.full_text, bl_report,
         )
         logger.info("[%s] Rubric evaluation done", job_id)
-
+        session_stats.full_analyses += 1
         return FullAnalysisResponse(
             job_id=job_id,
             video_source=filename,
@@ -232,6 +234,7 @@ async def full_analysis_youtube(body: FullAnalysisRequest) -> FullAnalysisRespon
 
     if body.use_placeholder:
         body_language = load_placeholder_body_language()
+        session_stats.full_analyses += 1
         return FullAnalysisResponse(
             job_id=job_id,
             video_source=body.url,
@@ -298,7 +301,7 @@ async def full_analysis_youtube(body: FullAnalysisRequest) -> FullAnalysisRespon
             api_key, model, ws_result.full_text, body_language.combined_report,
         )
         logger.info("[%s] Rubric evaluation done", job_id)
-
+        session_stats.full_analyses += 1
         return FullAnalysisResponse(
             job_id=job_id,
             video_source=body.url,

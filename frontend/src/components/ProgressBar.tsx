@@ -1,10 +1,21 @@
+/**
+ * Progress Bar Component
+ * 
+ * Displays transcription progress with:
+ * - Real-time percentage indicator
+ * - Step-by-step status visualization
+ * - User-friendly status messages
+ * - Error state with alert display
+ */
 import { AlertCircle } from 'lucide-react'
 import type { ProgressState, JobStatus } from '../types'
 
 interface ProgressBarProps {
+  /** Current progress state including status, percentage, and message */
   progress: ProgressState
 }
 
+/** Steps shown in progress indicator */
 const STEPS: { status: JobStatus; label: string }[] = [
   { status: 'uploading', label: 'Upload' },
   { status: 'extracting', label: 'Extract Audio' },
@@ -12,8 +23,13 @@ const STEPS: { status: JobStatus; label: string }[] = [
   { status: 'done', label: 'Done' },
 ]
 
+/** Ordering of job stages for progress visualization */
 const STATUS_ORDER: JobStatus[] = ['uploading', 'extracting', 'transcribing', 'done']
 
+/**
+ * Determine step state relative to current job status
+ * @returns 'done' if step is completed, 'active' if current step, 'idle' if not yet reached
+ */
 function stepState(stepStatus: JobStatus, currentStatus: JobStatus): 'done' | 'active' | 'idle' {
   const stepIdx = STATUS_ORDER.indexOf(stepStatus)
   const currIdx = STATUS_ORDER.indexOf(currentStatus)

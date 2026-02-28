@@ -1,3 +1,7 @@
+/**
+ * Application entry point
+ * Initializes React StrictMode for development-time checks and mounts the root App component
+ */
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'

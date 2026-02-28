@@ -42,9 +42,9 @@ from app.services.gemini_body_language import (
     get_video_duration,
     upload_video_to_gemini,
 )
+from app.services.session_stats import stats as session_stats
 from app.services.transcribe_service import TranscribeService
 from app.services.voice_analysis import calculate_fluctuation_timeline
-from app.services.whisper_service import WhisperService
 from app.services.youtube_service import YouTubeDownloader, is_valid_youtube_url
 
 logger = logging.getLogger(__name__)
@@ -126,13 +126,13 @@ async def analyze_file(
         logger.info("[%s] Audio extracted → %s", job_id, wav_path)
 
         # ── Transcribe ────────────────────────────────────────────────────
-        svc = WhisperService(settings)
-        loop = asyncio.get_running_loop()
-        ws_result = await loop.run_in_executor(None, svc.transcribe, wav_path, language)
+        svc = TranscribeService(settings)
+        ws_result = await svc.transcribe(wav_path, language)
 
         logger.info("[%s] Transcription done: %d segments, lang=%s",
                     job_id, len(ws_result.segments), ws_result.language)
 
+        session_stats.transcriptions += 1
         return _build_response(ws_result, job_id)
 
     except HTTPException:
@@ -176,14 +176,13 @@ async def analyze_youtube(body: YouTubeRequest) -> TranscriptResult:
 
         logger.info("[%s] YouTube audio ready: %s", job_id, wav_path)
 
-        svc = WhisperService(settings)
-        ws_result = await loop.run_in_executor(
-            None, svc.transcribe, wav_path, body.language
-        )
+        svc = TranscribeService(settings)
+        ws_result = await svc.transcribe(wav_path, body.language)
 
         logger.info("[%s] Transcription done: %d segments, lang=%s",
                     job_id, len(ws_result.segments), ws_result.language)
 
+        session_stats.transcriptions += 1
         return _build_response(ws_result, job_id)
 
     except HTTPException:
@@ -389,6 +388,7 @@ async def analyze_teaching(file: UploadFile) -> AnalysisResponse:
 
         timeline = [FluctuationWindow(**w) for w in timeline_raw]
 
+        session_stats.transcriptions += 1
         return AnalysisResponse(
             status="success",
             transcript=transcript,

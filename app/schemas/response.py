@@ -95,3 +95,39 @@ class FullAnalysisResponse(BaseModel):
     transcript: TranscriptResult | None = None
     body_language: BodyLanguageSummary | None = None
     rubric_evaluation: str | None = None
+
+
+# ── Dashboard ────────────────────────────────────────────────────────────────
+class ServiceStatus(BaseModel):
+    name: str
+    configured: bool
+    label: str
+
+
+class DashboardStats(BaseModel):
+    transcriptions: int
+    full_analyses: int
+    feedback_generated: int
+    uptime_seconds: int
+
+
+class DashboardResponse(BaseModel):
+    status: str = "ok"
+    version: str
+    services: list[ServiceStatus]
+    stats: DashboardStats
+    capabilities: list[str]
+
+
+# ── LLM Feedback (Minimax) ───────────────────────────────────────────────────
+class FeedbackRequest(BaseModel):
+    transcript: str | None = None
+    body_language_report: str | None = None
+    rubric_evaluation: str | None = None
+    additional_context: str | None = None
+
+
+class FeedbackResponse(BaseModel):
+    status: str = "success"
+    feedback: str
+    model: str

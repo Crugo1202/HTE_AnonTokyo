@@ -1,0 +1,13 @@
+.git
+.venv
+__pycache__
+*.pyc
+.env
+frontend/node_modules
+frontend/dist
+.cursor/projects
+agent-transcripts
+*.mp4
+*.mp3
+*.wav
+.tmp

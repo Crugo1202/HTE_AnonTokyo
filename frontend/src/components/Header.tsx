@@ -1,8 +1,18 @@
+/**
+ * Application Header Component
+ * 
+ * Displays the VoiceTrace branding and provides theme toggle functionality
+ * Props:
+ * - theme: Current theme setting (light/dark)
+ * - onToggle: Callback function to switch theme
+ */
 import { Mic, Sun, Moon } from 'lucide-react'
 import type { Theme } from '../types'
 
 interface HeaderProps {
+  /** Current active theme: 'light' or 'dark' */
   theme: Theme
+  /** Callback to toggle between light and dark theme */
   onToggle: () => void
 }
 

@@ -15,3 +15,7 @@ pydub>=0.25.1
 amazon-transcribe
 # Gemini body-language analysis
 google-genai>=1.0.0
+# Minimax LLM feedback (Anthropic-compatible SDK)
+anthropic>=0.30.0
+# AWS Lambda ASGI adapter
+mangum>=0.17.0

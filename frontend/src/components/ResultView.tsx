@@ -1,3 +1,14 @@
+/**
+ * Result View Component
+ * 
+ * Displays transcription results with multiple view modes:
+ * - Full transcript text view
+ * - Timestamped segments with timeline
+ * - SRT subtitle format preview
+ * - Download options for each format
+ * - Metadata: duration, language, word count
+ * - Reset button to start new transcription
+ */
 import { useState } from 'react'
 import {
   FileText,
@@ -12,18 +23,28 @@ import {
 import type { TranscriptResult } from '../types'
 
 interface ResultViewProps {
+  /** Complete transcription result from API */
   result: TranscriptResult
+  /** Callback to reset application and start new transcription */
   onReset: () => void
 }
 
+/** Available views for displaying transcription results */
 type ViewTab = 'text' | 'segments' | 'srt'
 
+/**
+ * Format duration in seconds to human-readable format (e.g., "2m 45s")
+ */
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = Math.floor(seconds % 60)
   return `${m}m ${s}s`
 }
 
+/**
+ * Format absolute timestamp in seconds to HH:MM:SS format
+ * Omits hours if less than 1 hour (shows MM:SS format)
+ */
 function formatTime(seconds: number): string {
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
@@ -32,6 +53,12 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+/**
+ * Trigger a file download using Blob and URL API
+ * @param content - File content string
+ * @param filename - Desired filename for download
+ * @param mime - MIME type (e.g., 'text/plain', 'text/srt')
+ */
 function downloadBlob(content: string, filename: string, mime: string) {
   const blob = new Blob([content], { type: mime })
   const url = URL.createObjectURL(blob)
@@ -43,8 +70,10 @@ function downloadBlob(content: string, filename: string, mime: string) {
 }
 
 export default function ResultView({ result, onReset }: ResultViewProps) {
+  /** Currently active result view tab */
   const [activeTab, setActiveTab] = useState<ViewTab>('text')
 
+  /** Calculate word count for display in metadata */
   const wordCount = result.full_text.trim().split(/\s+/).filter(Boolean).length
 
   return (

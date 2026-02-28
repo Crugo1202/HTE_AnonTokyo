@@ -1,0 +1,85 @@
+name: Build & Deploy Lambda + CloudFront
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  LAMBDA_FUNCTION_NAME: hte-anontokyo-api
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build frontend assets
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Lambda deployment bundle
+        run: |
+          python -m pip install --upgrade pip
+          mkdir -p package
+          python -m pip install -r requirements.txt -t package
+          cp -R app package/app
+          cp -R body_language_analysis package/body_language_analysis
+          cp -R frontend/dist package/static
+          (cd package && zip -r ../lambda_bundle.zip .)
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify Lambda function exists
+        run: |
+          aws lambda get-function \
+            --function-name "$LAMBDA_FUNCTION_NAME" \
+            --region "$AWS_REGION" >/dev/null
+
+      - name: Deploy code to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name "$LAMBDA_FUNCTION_NAME" \
+            --zip-file fileb://lambda_bundle.zip \
+            --publish \
+            --region "$AWS_REGION"
+          aws lambda wait function-updated \
+            --function-name "$LAMBDA_FUNCTION_NAME" \
+            --region "$AWS_REGION"
+
+      - name: Invalidate CloudFront cache (if configured)
+        env:
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          if [ -n "${CLOUDFRONT_DISTRIBUTION_ID}" ]; then
+            aws cloudfront create-invalidation \
+              --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+              --paths "/*"
+          else
+            echo "CLOUDFRONT_DISTRIBUTION_ID not set; skipping invalidation."
+          fi
