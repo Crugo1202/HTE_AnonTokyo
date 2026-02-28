@@ -3,12 +3,11 @@ import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { Platform } from 'react-native';
 import { COLORS, FONTS } from '@/utils/constants';
+import fontMap from './fonts';
 
 export default function RootLayout() {
-  // Load Inter variable font (single file covers 400–700 weights)
-  const [fontsLoaded] = useFonts({
-    [FONTS.INTER]: require('../assets/fonts/Inter-VariableFont_opsz,wght.ttf'),
-  });
+  // Web: fontMap is {} (Inter via Google Fonts in useEffect). Native: fontMap loads local .ttf
+  const [fontsLoaded] = useFonts(fontMap);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
