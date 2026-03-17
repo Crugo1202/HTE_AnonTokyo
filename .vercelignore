@@ -1,4 +1,5 @@
 .git
+.gitignore
 .env.local
 .env*.local
 node_modules
@@ -11,12 +12,10 @@ build/
 dist/
 *.egg-info/
 .DS_Store
-body_language_analysis/
-Dockerfile
-Dockerfile.lambda
-.gitignore
+*.md
 README.md
 CONTRIBUTING.md
-docs/
-tests/
-video_analysis_report.md
+.cursor
+.aws
+Dockerfile
+Dockerfile.lambda
